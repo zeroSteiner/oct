@@ -1,0 +1,5 @@
+Flask==0.10.1
+Flask-YAMLConfig==0.0.3
+Jinja2>=2.8
+requests==2.8.1
+twitter==1.17.1
