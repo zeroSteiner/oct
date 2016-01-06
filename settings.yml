@@ -1,0 +1,6 @@
+application:
+  TWITTER_API:
+    token: null
+    token_key: null
+    con_secret: null
+    con_secret_key: null
