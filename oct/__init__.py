@@ -42,8 +42,6 @@ app.jinja_env.lstrip_blocks = True
 
 flask.ext.yamlconfig.AppYAMLConfig(app, '../settings.yml')
 
-app.route('/')(lambda: flask.redirect(flask.url_for('index')))
-
 tco_uri_re = re.compile('https?://t\.co/[a-zA-Z0-9]{6,}')
 twit = twitter.Twitter(
 	auth=twitter.OAuth(
@@ -77,7 +75,7 @@ def get_status(tco_path):
 					continue
 				return status
 
-@app.route('/index')
+@app.route('/')
 def index():
 	jvars = {}
 	tco_path = flask.request.args.get('q', '') or flask.request.args.get('tco_path', '')
