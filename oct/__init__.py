@@ -29,11 +29,14 @@
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import datetime
 import re
 
 import flask
+import flask.ext.sqlalchemy
 import flask.ext.yamlconfig
 import requests
+import sqlalchemy.dialects.postgresql as postgresql
 import twitter
 
 app = flask.Flask(__name__)
@@ -41,6 +44,8 @@ app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
 
 flask.ext.yamlconfig.AppYAMLConfig(app, '../settings.yml')
+
+sqlalchemy = flask.ext.sqlalchemy.SQLAlchemy(app)
 
 tco_uri_re = re.compile('https?://t\.co/[a-zA-Z0-9]{6,}')
 twit = twitter.Twitter(
@@ -51,6 +56,19 @@ twit = twitter.Twitter(
 		app.config['TWITTER_API']['con_secret_key']
 	)
 )
+
+class SearchResult(sqlalchemy.Model):
+	__tablename__ = 'search_results'
+	id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+	created = sqlalchemy.Column(sqlalchemy.DateTime, default=lambda _: datetime.datetime.utcnow())
+	path = sqlalchemy.Column(sqlalchemy.String, nullable=False, unique=True)
+	queried_count = sqlalchemy.Column(sqlalchemy.Integer, default=1)
+	redirects = sqlalchemy.Column(postgresql.JSON, nullable=False)
+	status = sqlalchemy.Column(postgresql.JSON, nullable=False)
+	def __repr__(self):
+		return "<search_result id:{0} path:\"{1}\" >".format(self.id, self.path)
+
+sqlalchemy.create_all()
 
 def get_redirects(tco_path):
 	resp = requests.get('https://t.co/' + tco_path)
@@ -63,9 +81,12 @@ def get_redirects(tco_path):
 def get_status(tco_path):
 	count = 20
 	for scheme in ('http', 'https'):
-		statuses = [ None ] * count
+		statuses = [None] * count
 		while len(statuses) == count:
-			results = twit.search.tweets(count=count, q="{0}://t.co/{1}".format(scheme, tco_path))
+			try:
+				results = twit.search.tweets(count=count, q="{0}://t.co/{1}".format(scheme, tco_path))
+			except twitter.TwitterHTTPError:
+				return
 			statuses = results['statuses']
 			for status in statuses:
 				text = status['text']
@@ -83,10 +104,23 @@ def index():
 		tco_path = tco_path.split(':', 1)[-1][2:]
 	if tco_path.startswith('t.co/'):
 		tco_path = tco_path[5:]
+
 	if re.match('^[a-zA-Z0-9]{6,20}$', tco_path):
+		session = sqlalchemy.session
 		jvars['query'] = tco_path
-		redirects = get_redirects(tco_path)
-		jvars['redirects'] = redirects
-		if redirects:
-			jvars['status'] = get_status(tco_path)
+		search_result = session.query(SearchResult).filter_by(path=tco_path).first()
+		if search_result is None:
+			redirects = get_redirects(tco_path)
+			if redirects:
+				status = get_status(tco_path)
+				if status is not None:
+					search_result = SearchResult(path=tco_path, redirects=redirects, status=status)
+					session.add(search_result)
+		else:
+			search_result.queried_count += 1
+
+		if search_result is not None:
+			jvars['redirects'] = search_result.redirects
+			jvars['status'] = search_result.status
+			session.commit()
 	return flask.render_template('index.html', **jvars)
