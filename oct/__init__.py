@@ -92,8 +92,8 @@ def get_status(tco_path):
 				text = status['text']
 				if tco_uri_re.search(text) is None:
 					continue
-				if text.startswith('RT @'):
-					continue
+				if 'retweeted_status' in status:
+					return status['retweeted_status']
 				return status
 
 @app.route('/')
@@ -112,6 +112,7 @@ def index():
 		if search_result is None:
 			redirects = get_redirects(tco_path)
 			if redirects:
+				jvars['redirects'] = redirects
 				status = get_status(tco_path)
 				if status is not None:
 					search_result = SearchResult(path=tco_path, redirects=redirects, status=status)
@@ -120,7 +121,6 @@ def index():
 			search_result.queried_count += 1
 
 		if search_result is not None:
-			jvars['redirects'] = search_result.redirects
 			jvars['status'] = search_result.status
 			session.commit()
 	return flask.render_template('index.html', **jvars)
