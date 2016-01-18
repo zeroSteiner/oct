@@ -121,6 +121,7 @@ def index():
 			search_result.queried_count += 1
 
 		if search_result is not None:
+			jvars['redirects'] = search_result.redirects
 			jvars['status'] = search_result.status
 			session.commit()
 	return flask.render_template('index.html', **jvars)
