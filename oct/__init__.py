@@ -72,11 +72,8 @@ class SearchResult(sqlalchemy.Model):
 sqlalchemy.create_all()
 
 def get_redirects(tco_path):
-	headers = {
-		'User-Agent': flask.request.headers.get('User-Agent')
-	}
 	try:
-		resp = requests.get('https://t.co/' + tco_path, headers=headers)
+		resp = requests.get('https://t.co/' + tco_path)
 	except requests.exceptions.RequestException:
 		return
 	if not resp.history:
