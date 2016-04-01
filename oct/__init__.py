@@ -34,16 +34,17 @@ import re
 
 import flask
 import flask.ext.sqlalchemy
-import flask.ext.yamlconfig
 import requests
 import sqlalchemy.dialects.postgresql as postgresql
 import twitter
 
 app = flask.Flask(__name__)
+app.config.from_object('oct.default_settings')
+app.config.from_pyfile('application.cfg', silent=True)
+app.config.from_envvar('OCT_SETTINGS', silent=True)
+
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
-
-flask.ext.yamlconfig.AppYAMLConfig(app, '../settings.yml')
 
 sqlalchemy = flask.ext.sqlalchemy.SQLAlchemy(app)
 
@@ -71,7 +72,13 @@ class SearchResult(sqlalchemy.Model):
 sqlalchemy.create_all()
 
 def get_redirects(tco_path):
-	resp = requests.get('https://t.co/' + tco_path)
+	headers = {
+		'User-Agent': flask.request.headers.get('User-Agent')
+	}
+	try:
+		resp = requests.get('https://t.co/' + tco_path, headers=headers)
+	except requests.exceptions.RequestException:
+		return
 	if not resp.history:
 		return
 	urls = [r.url for r in resp.history]
