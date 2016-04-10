@@ -43,6 +43,8 @@ else:
 	import rlcompleter
 	readline.parse_and_bind('tab: complete')
 
+app = oct.app
+
 def main():
 	parser = argparse.ArgumentParser(description='OCT', conflict_handler='resolve')
 	parser.add_argument('-v', '--version', action='version', version=parser.prog + ' Version: 1.0')
