@@ -33,6 +33,8 @@ import argparse
 import os
 import requests
 
+import oct
+
 try:
 	import readline
 except ImportError:
@@ -54,7 +56,6 @@ def main():
 	parser_search.add_argument('tco_path', help='the target t.co uri path')
 
 	arguments = parser.parse_args()
-	import oct
 	if arguments.action == 'serve':
 		if os.environ.get('DISPLAY'):
 			if not 'X-RUN-CHILD' in os.environ:
