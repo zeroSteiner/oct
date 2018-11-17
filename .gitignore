@@ -1,3 +1,6 @@
+.env
+.venv/*
 *.py[cod]
 
 oct/application.cfg
+settings.yml
