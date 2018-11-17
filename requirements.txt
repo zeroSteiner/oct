@@ -1,5 +1,0 @@
-flask==0.10.1
-flask-sqlalchemy==2.1
-jinja2>=2.8
-requests==2.8.1
-twitter==1.17.1
